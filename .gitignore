@@ -1,0 +1,23 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Secrets - never commit real keys
+.env
+*.env
+!.env.example
+
+# Test tool caches
+.deepeval/
+node_modules/
+.promptfoo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

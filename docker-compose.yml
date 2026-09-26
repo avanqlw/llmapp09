@@ -1,0 +1,81 @@
+# Usage:
+#   docker compose up -d --build                     -> backend (llm-multiroute) + frontend
+#   docker compose --profile python up -d --build    -> also starts the single-model llm-python API
+#   docker compose down                              -> stop (named volumes are kept)
+#   docker compose down -v                           -> stop AND delete saved data
+#
+# Secrets are read from a .env file next to this file (never commit it).
+
+services:
+  llm-multiroute:
+    build: ./llm-multiroute
+    image: ${DOCKERHUB_USERNAME:-local}/llm-multiroute:latest
+    container_name: llm-multiroute
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://ollama.com}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.7}
+      - OLLAMA_MODEL_CLASSIFY=${OLLAMA_MODEL_CLASSIFY:-gemma4:31b}
+      - OLLAMA_MODEL_SENTIMENT=${OLLAMA_MODEL_SENTIMENT:-glm-5.2}
+      - OLLAMA_MODEL_SUMMARIZE=${OLLAMA_MODEL_SUMMARIZE:-mistral-large-3:675b}
+      - OLLAMA_MODEL_INTENT=${OLLAMA_MODEL_INTENT:-minimax-m3}
+      - SERVER_PORT=8080
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+    volumes:
+      # Cost / performance / safety metrics survive container restarts and rebuilds
+      - multiroute-metrics:/app/metrics
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/ai/routes')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - llm-network
+
+  llm-python:
+    build: ./llm-python
+    image: ${DOCKERHUB_USERNAME:-local}/llm-python:latest
+    container_name: llm-python
+    restart: unless-stopped
+    profiles: ["python"]
+    ports:
+      - "8081:8080"
+    environment:
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://ollama.com}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:31b}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.7}
+      - SERVER_PORT=8080
+    networks:
+      - llm-network
+
+  llm-frontend-python:
+    build: ./llm-frontend-python
+    image: ${DOCKERHUB_USERNAME:-local}/llm-frontend-python:latest
+    container_name: llm-frontend-python
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Containers on the same network reach each other by service name
+      - BACKEND_URL=http://llm-multiroute:8080
+      - FLASK_PORT=5000
+      - FLASK_DEBUG=false
+    depends_on:
+      llm-multiroute:
+        condition: service_healthy
+    networks:
+      - llm-network
+
+volumes:
+  multiroute-metrics:
+
+networks:
+  llm-network:
+    driver: bridge
