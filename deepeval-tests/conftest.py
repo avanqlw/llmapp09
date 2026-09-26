@@ -165,6 +165,9 @@ def answer_relevancy_metric():
             "Do NOT penalize the output for omitting details of the input that "
             "its kind of analysis would not normally include (e.g. a sentiment "
             "result need not mention times, places, or topics).",
+            "Judge relevance only, not precision: an arguable individual label "
+            "or emotion (e.g. 'indifference' for a neutral note) is a matter for "
+            "the separate correctness metrics, not a relevancy failure.",
             "Penalize only output that is unrelated to, or contradicts, the input.",
         ],
         evaluation_params=[
