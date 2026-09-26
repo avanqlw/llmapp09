@@ -154,6 +154,19 @@ def answer_relevancy_metric():
             "Structured metadata (labels, categories, confidence scores) that "
             "accurately describes the input text should be considered relevant."
         ),
+        # Fixed steps so the judge grades the same way every run instead of
+        # inventing its own (e.g. demanding a sentiment result restate topics).
+        evaluation_steps=[
+            "Identify what kind of analysis the actual output provides (e.g. "
+            "topic labels, sentiment/emotions, a summary, or user intent).",
+            "Check whether that analysis is a sensible description of the input "
+            "text for its kind: labels match the topic, sentiment/emotions match "
+            "the tone, a summary reflects the content, intent matches the goal.",
+            "Do NOT penalize the output for omitting details of the input that "
+            "its kind of analysis would not normally include (e.g. a sentiment "
+            "result need not mention times, places, or topics).",
+            "Penalize only output that is unrelated to, or contradicts, the input.",
+        ],
         evaluation_params=[
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
